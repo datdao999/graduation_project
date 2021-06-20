@@ -1,159 +1,267 @@
+from datetime import datetime
+from sqlite3.dbapi2 import Date
 import cv2
 from tkinter import *
+from tkinter import ttk
 from PIL import ImageTk, Image
-from tkinter import filedialog
-from detect_license import load_model, preprocess_image, getPlate, imshow_components, compare
+from tkinter import filedialog, messagebox
+from detect_license import load_model, preprocess_image, getPlate, imshow_components, compare, recognize
 import functools
 from os.path import splitext, basename
 import numpy as np 
+import connect_database
+import count_money
 
-root = Tk()
-root.title('Reconize license plate')
-root.geometry('800x600')
-root.resizable(width= False, height= False)
-frame = Frame(root,  bg = 'green')
-frame.place(x=0, y=0)
-image_dir = 'D:/Project graduate/license_plate_WPOD/test/thuty.png'
-global text
-def opendiglog() :
-    global filename
-    filename = filedialog.askopenfilename( title = 'select a file', filetypes = (('png files', '*.png'),('jpg files', '*.jpg'),('all files', '*.*' )))
-    my_image = ImageTk.PhotoImage(Image.open(filename).resize((300,300)))
-    label =  Label(root, image= my_image)
-    label.image = my_image 
-    label.place(x=100, y=0)
-   
+my_image2 = ''
+my_image = ''
+
+def sign_in():
+    def check(username, password):
+        if username == 'admin' and password == '123456':
+            fifth_root.destroy()
+            manager()
+    fifth_root = Tk()
+    fifth_root.title('Sign in')
+    fifth_root.geometry('350x200')
+    label = Label(fifth_root, text='Log in', font=("Arial", 24), fg='blue')
+    label.place(x=120, y = 0)
+    user_name_label = Label(fifth_root, text='Username')
+    user_name_label.place(x=0, y = 70)
+    user_name_entry = Entry(fifth_root)
+    user_name_entry.place(x = 60, y =70)
+    password_label = Label(fifth_root, text='Password')
+    password_label.place(x=0, y = 100)
+    password_entry = Entry(fifth_root, show='*')
+    password_entry.place(x=60, y=100)
+    sign_in_button = Button(fifth_root, text='Submit', command= lambda:check(user_name_entry.get(), password_entry.get()))
+    sign_in_button.place(x = 60, y = 130)
+    fifth_root.mainloop()
+
+
+def start_page():
+    root = Tk()
+    root.title('Recognize license plate')
+    root.geometry('300x300')
+    root.resizable(width= False, height= False) 
+    photo_about_me = PhotoImage(file = 'Actions-help-about-icon.png')
+    photo_car = PhotoImage(file ='Car-icon.png')
+    photo_manage_price = PhotoImage(file = 'Manager-icon.png')
+    photo_logo = ImageTk.PhotoImage(Image.open('logo_utc2.jfif').resize((150,150)))
+
+    logo_label = Label(root, image= photo_logo)
+    logo_label.place(x = 70, y = 0, height = 150, width = 150)
+
+    recognize_btn = Button(root, text= 'Recognize license', image=photo_car, command= lambda:[root.destroy(), call_recognize()], compound=LEFT)
+    recognize_btn.place(x = 70, y = 160)
+
+    manager_btn = Button(root, text= 'Manager price', image = photo_manage_price ,command=lambda:[root.destroy(), sign_in()], compound=LEFT)
+    manager_btn.place(x = 70, y = 200)
+
+    about_me_btn = Button(root, text='About me', image= photo_about_me ,command= lambda:[root.destroy(), open_about_me()] , compound= LEFT )
+    about_me_btn.place(x = 70, y = 240)
+
     
-def recognize(filename):
-    wpod_net_path = "wpod-net.json"
+
+    root.mainloop() 
+
+def open_about_me():
+    second_root = Tk()
+    second_root.title('About me')
+    second_root.geometry('400x300')
+    photo_home = PhotoImage(file = 'arrow-return-down-left-icon.png')
+    
+
+   
+    about_me_label = Label(second_root, text = 'Develop by Dao Duc Dat')
+    about_me_label.place(x= 150, y=100)
+    
+    open_root_button = Button(second_root, text= 'Home', image = photo_home ,command= lambda:[second_root.destroy(), start_page()], compound=LEFT)
+    open_root_button.place(x = 180, y=200)
+    second_root.mainloop()
+    
+def call_recognize():
+    third_root = Tk()
+    third_root.title('Reconize license plate')
+    third_root.geometry('900x600')
+    third_root.resizable(width= False, height= False)
+    in_label= Label(third_root, text= 'Entrance', font=("Arial", 24), fg='blue')
+    in_label.place(x=120, y = 0)
+    photo_home = PhotoImage(file = 'arrow-return-down-left-icon.png')
+    photo_load_image = PhotoImage(file = 'My-Pictures-icon.png')
+    photo_execute = PhotoImage(file = 'execute-icon.png')
+
+    wpod_net_path = "wpod-net-upgrade_final.json"
     wpod_net = load_model(wpod_net_path)
 
+    def opendiglog() :
+        global my_image, filename
+        filename = filedialog.askopenfilename( title = 'select a file', filetypes = (('jpg files', '*.jpg'),('png files', '*.png'),('all files', '*.*' )))
+        my_image = ImageTk.PhotoImage(Image.open(filename).resize((350,250)))
 
-    test_image = filename
-    # cv2.imshow('dsfdsf', test_image)
-    LpImg,cor = getPlate(test_image, wpod_net)
-    print("Detect %i plate(s) in"%len(LpImg), splitext(basename(test_image))[0])
-    print("Coordiate of plates in image: \n", len(LpImg))
+        # label =  Label(root, image= my_image)
+        label.config(image=my_image) 
+        # label.place(x=100, y=0)
+        
+    def excute(filename):
+
+        license_string = recognize(filename, wpod_net= wpod_net) 
+
+        text.delete('1.0', END)
+        text.insert(INSERT, license_string)
+        print("Ky tu cua xe la", license_string)
     
-    if (len(LpImg)):
-        
-
-        plate_img = cv2.convertScaleAbs(LpImg[0], alpha = (255.0))
-        gray = cv2.cvtColor(plate_img, cv2.COLOR_BGR2GRAY)
-        # Show the original image
-        
-
-        # Apply Gaussian blurring and thresholding 
-        # to reveal the characters on the license plate
-        blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-        thresh = cv2.adaptiveThreshold(blurred, 255,
-            cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, 45, 15)
-
-        kernel3 = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-        thre_mor = cv2.morphologyEx(thresh, cv2.MORPH_DILATE, kernel3)
-        #cv2.imshow('anh nhi phan', thre_mor)
-        # Perform connected components analysis on the thresholded images and
-        # initialize the mask to hold only the components we are interested in
-        _, labels = cv2.connectedComponents(thresh)
-        mask = np.zeros(thresh.shape, dtype="uint8")
-        
-            
-        imshow_components(labels)
-
-        # Set lower bound and upper bound criteria for characters
-        total_pixels = plate_img.shape[0] * plate_img.shape[1]
-        lower = total_pixels // 190 # heuristic param, can be fine tuned if necessary
-        upper = total_pixels // 20 # heuristic param, can be fine tuned if necessary
-        # print("lower :{}, upper:{}".format(lower, upper))
-        # Loop over the unique components
-        for (i, label) in enumerate(np.unique(labels)):
-            # If this is the background label, ignore it
-            if label == 0:
-                continue
-        
-            # Otherwise, construct the label mask to display only connected component
-            # for the current label
-            labelMask = np.zeros(thresh.shape, dtype="uint8")
-            labelMask[labels == label] = 255
-            numPixels = cv2.countNonZero(labelMask)
-            # print('numberpixels:',numPixels )
-            # If the number of pixels in the component is between lower bound and upper bound, 
-            # add it to our mask
-            if numPixels > lower and numPixels < upper:
-                
-                mask = cv2.add(mask, labelMask)
-            
-        # Find contours and get bounding box for each contour
-        cnts, _ = cv2.findContours(mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        boundingBoxes = [cv2.boundingRect(c) for c in cnts]
-        
-
-
-        # Sort the bounding boxes from left to right, top to bottom
-        # sort by Y first, and then sort by X if Ys are similar
-        
-        boundingBoxes = sorted(boundingBoxes, key=functools.cmp_to_key(compare) )
-
-    i = 0
-    model_svm = cv2.ml.SVM_load('svm.xml')
-    license_list =[]
-    for bound in boundingBoxes:
-        (x, y, w, h) = bound
-        ratio = h/w
-        
-        # print("ratio2:", ratio)
-        if ratio <= 9.0 and ratio > 1.1:
-            
-            cv2.rectangle(plate_img, (x, y), (x+w, y+h), (0,255,0),2)
-            output_string =str(y) 
-            cv2.putText(plate_img, str(output_string), (x, y+h+15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (36,255,12), 1)
-            curr_num = thre_mor[ y:y+h, x:x+w]
-            curr_num = cv2.resize(curr_num, dsize = (30, 60))
-
-            _, curr_num = cv2.threshold(curr_num, 30, 255, cv2.THRESH_BINARY)
-            curr_num = np.array(curr_num, dtype = np.float32)
-            curr_num = curr_num.reshape(-1, 30*60)
-            i = i+1
-            
-            result = model_svm.predict(curr_num)[1]
-            string = model_svm.getKernelType()
-            print("kieu thuat toan", string)
-            result = int(result[0,0])
-            if result<=9: # Neu la so thi hien thi luon
-                result = str(result)
-            else: #Neu la chu thi chuyen bang ASCII
-                result = chr(result)
-            
-            license_list.extend(result)
-        license_string = ''.join(license for license in license_list)
-    text.insert(INSERT, license_string)
-    print("Ky tu cua xe la", license_string)
-    cv2.imshow('ket qua', plate_img)
-   
-    # print("boundingBoxes:" + str(boundingBoxes) )
-
-
-    cv2.waitKey()
+        connect_database.insert(license_string)
     
 
-# dialog = filedialog.askopenfile(title = 'select a file', filetypes = (('png files', '*.png'),('all files', '*.*' )))
+        cv2.waitKey()
+        
+    label =  Label(third_root, bg='gray', image= my_image)
+    label.place(x=0, y=40, width=350, height=250)
+
+    buttonLoadImage = Button(third_root, text='Load_image', image= photo_load_image ,command= opendiglog, compound= LEFT)
+    buttonLoadImage.place(x=180, y=330)
+
+    buttonExcute = Button(third_root, text='Excute', image=photo_execute ,command=lambda:excute(filename), compound=LEFT)
+    buttonExcute.place(x=300, y=330,)
+
+    license_label_in = Label(third_root, text = 'License plates:' )
+    license_label_in.place(x= 0, y = 300)
+
+    text = Text(third_root)
+    text.place (x=0, y=330, height = 30, width = 150)
+
+    my_canvas = Canvas(third_root, width=5, height= 600, bg='white')
+    my_canvas.place(x=450, y = 0)
+    my_canvas.create_line(2, 0, 2, 600, fill='black',dash=(4,2))
+    #Exit gateway
+
+    def opendiglog2() :
+        global my_image2, filename2
+        filename2 = filedialog.askopenfilename( title = 'select a file', filetypes = (('jpg files', '*.jpg'),('png files', '*.png'),('all files', '*.*' )))
+        my_image2 = ImageTk.PhotoImage(Image.open(filename2).resize((350,250)))
+        # label2 =  Label(root, image= my_image)
+        label2.config(image=my_image2)
+        # label2.place(x=500, y=0)
+
+    def excute2(filename):
+
+        license_string = recognize(filename, wpod_net= wpod_net) 
 
 
-buttonLoadImage = Button(root, text='Load_image', command=  opendiglog)
-buttonLoadImage.place(x=0, y=0)
+        try:
+            time_getout = connect_database.select_car_in(license_string)[2]
+            connect_database.delete(license_string)
+            text2.delete('1.0', END)
+            text2.insert(INSERT, license_string)
+            print("Ky tu cua xe la", license_string)
+        
+            time = datetime.now() - datetime.strptime(time_getout, '%Y-%m-%d %H:%M:%S.%f') 
+            # print('Time: ', time)
+            print('thanh tien la:',count_money.count(time))
+            connect_database.insert_car_out(license_string,count_money.count(time), time_getout )
+            # text3.delete('1.0', END)
+            text3.insert(INSERT, str(count_money.count(time))) 
+        except:
+            text2.delete('1.0', END)
+            text2.insert(INSERT, 'the car is not in the park')
+        
 
-label =  Label(root, bg='gray')
-label.place(x=100, y=0, width=300, height=200)
-
-root.update()
-print("label width: ", label.winfo_geometry())
-
-buttonExcute = Button(root, text='Excute', command=lambda:recognize(filename))
-buttonExcute.place(x=0, y=40,)
+    out_label= Label(third_root, text= 'Exit', font=("Arial", 24), fg='blue')
+    out_label.place(x=650, y = 0)
 
 
-text = Text(root)
-text.place (x=0, y=80, height = 100, width = 100)
+
+    label2 =  Label(third_root, bg='gray', image= my_image2)
+    label2.place(x=549, y=40, width=350, height=250)
+
+    buttonLoadImage2 = Button(third_root, text='Load_image', image=photo_load_image ,command=opendiglog2, compound= LEFT)
+    buttonLoadImage2.place(x=715, y=330)
 
 
-root.mainloop() 
+    buttonExcute2 = Button(third_root, text='Excute', image= photo_execute ,command=lambda:excute2(filename2), compound=LEFT)
+    buttonExcute2.place(x=830, y=330)
+
+    license_label_out = Label(third_root, text = 'License plates:' )
+    license_label_out.place(x= 530, y = 300)
+
+    text2 = Text(third_root)
+    text2.place (x=530, y=330, height = 30, width = 150)
+
+    price_label = Label(third_root, text = 'Fee:' )
+    price_label.place(x= 530, y = 370)
+
+    text3 = Text(third_root)
+    text3.place(x=530, y=400, height = 30, width = 150)
+    text3.bind("<Key>", lambda e: 'break')
+
+    home_btn = Button(third_root, text= 'Home', image=photo_home, command= lambda: [third_root.destroy(),start_page()], compound=LEFT)
+    home_btn.place(x = 0, y = 570)
+
+    third_root.mainloop()
+
+def manager():
+
+    fouth_root = Tk()
+    fouth_root.geometry('500x400')
+    fouth_root.title('Manager')
+    def check_input(S):
+        if S in ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']:
+            return True
+        fouth_root.bell() # .bell() plays that ding sound telling you there was invalid input
+        return False
+
+    def manager_price(price):
+        if price != "":
+            connect_database.insert_price(price)
+        else:
+            messagebox.showerror("showerror", "You need input the price")
+
+    def load_history(license_plate):
+        rows = connect_database.select_car_out(license_plate)
+        for row in rows:
+            my_tree.insert(parent='', index='end', values=(row[1], row[2], row[3], row[4]))
+        
+
+    price_label = Label(fouth_root, text='New price:')
+    price_label.place(x = 0, y = 0)
+    vcmd = (fouth_root.register(check_input), '%S')
+    price_entry = Entry(fouth_root, validate= 'key', vcmd= vcmd)
+    price_entry.place(x = 70, y = 0)
+    price_button = Button(fouth_root, text= 'Apply', command=lambda:manager_price(price_entry.get()))
+    price_button.place(x=69, y=30)
+    label = Label(fouth_root, text = 'Price:'+str(connect_database.select_price()))
+    label.place(x = 250, y = 0)
+
+    search_label = Label(fouth_root, text='Search:')
+    search_label.place(x = 0, y = 75)
+    
+    search_entry = Entry(fouth_root)
+    search_entry.place(x = 70, y =75 )
+
+    search_button = Button(fouth_root, text='Search', command=lambda:load_history(search_entry.get()))
+    search_button.place(x = 70, y= 105)
+
+
+    my_tree = ttk.Treeview(fouth_root)
+
+    my_tree['columns'] = ('license plate', 'price', 'time in', 'time out')
+    my_tree.column('#0', width=0, minwidth=0)
+    my_tree.column('license plate', width= 90 )
+    my_tree.column('price', anchor=W, width=90  )
+    my_tree.column('time in',anchor=CENTER, width=90 )
+    my_tree.column('time out', anchor=W , width=90 )
+
+    my_tree.heading('license plate', text='Licensen plate')
+    my_tree.heading('price', text='Price')
+    my_tree.heading('time in', text='Time in')
+    my_tree.heading('time out', text='Time out')
+    
+    
+
+    my_tree.place(y = 150, x = 0)
+    fouth_root.mainloop()
+
+start_page()
+
+
+
