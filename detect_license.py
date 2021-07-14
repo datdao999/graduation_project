@@ -44,7 +44,7 @@ def imshow_components(labels):
         # set bg label to black
         labeled_img[label_hue==0] = 0
 
-        cv2.imshow('labeled.png', labeled_img)
+        # cv2.imshow('labeled.png', labeled_img)
 def compare(rect1, rect2):
         
         if abs(rect1[1] - rect2[1]) > 20:
@@ -53,7 +53,7 @@ def compare(rect1, rect2):
             return rect1[0] - rect2[0]
 
 def recognize(test_image, wpod_net):
-    
+
     LpImg,cor = getPlate(test_image, wpod_net)
     print("Detect %i plate(s) in"%len(LpImg), splitext(basename(test_image))[0])
     print("Coordiate of plates in image: \n", cor)
@@ -63,25 +63,27 @@ def recognize(test_image, wpod_net):
         plate_img = cv2.convertScaleAbs(LpImg[0], alpha = (255.0))
         gray = cv2.cvtColor(plate_img, cv2.COLOR_BGR2GRAY)
         # Show the original image
-        cv2.imshow("License Plate", plate_img)
+        
 
         # Apply Gaussian blurring and thresholding 
         # to reveal the characters on the license plate
         blurred = cv2.GaussianBlur(gray, (5, 5), 0)
         thresh = cv2.adaptiveThreshold(blurred, 255,
             cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, 45, 15)
-
+        # cv2.imshow("gaussian", blurred)
+        # cv2.imshow('adaptiveThreshold', thresh)
         kernel3 = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
         thre_mor = cv2.morphologyEx(thresh, cv2.MORPH_DILATE, kernel3)
-
+        # cv2.imshow("morphologyEx", thre_mor)
     
         # Perform connected components analysis on the thresholded images and
         # initialize the mask to hold only the components we are interested in
         _, labels = cv2.connectedComponents(thresh)
         mask = np.zeros(thresh.shape, dtype="uint8")
-        print('dai rong cua 1 buc anh:', plate_img.shape)
         
-        imshow_components(labels)
+
+        
+        # imshow_components(labels)
 
         # Set lower bound and upper bound criteria for characters
         total_pixels = plate_img.shape[0] * plate_img.shape[1]
@@ -89,7 +91,7 @@ def recognize(test_image, wpod_net):
         upper = total_pixels // 20 # heuristic param, can be fine tuned if necessary
         # print("lower :{}, upper:{}".format(lower, upper))
         # Loop over the unique components
-        print('day la label',labels)
+        
         for (i, label) in enumerate(np.unique(labels)):
             
             # If this is the background label, ignore it
@@ -131,14 +133,14 @@ def recognize(test_image, wpod_net):
         
         # print('so white, dien tich ne:', ratioWhite)
         if  ratio <= 8.6 and ratio > 0.4 and ratioWhite > 0.35 and ratioWhite < 0.85 and w+x <= plate_img.shape[1] - 15 and x > 5:
-            print("w, h", w,h)
+            
             cv2.rectangle(plate_img, (x, y), (x+w, y+h), (0,255,0),2)
             
             output_string =str(x+w) 
-            cv2.putText(plate_img, str(output_string), (x-10, y+h-20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (36,255,12), 1)
+            # cv2.putText(plate_img, str(output_string), (x-10, y+h-20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (36,255,12), 1)
             curr_num = thre_mor[ y:y+h, x:x+w]
             curr_num = cv2.resize(curr_num, dsize = (30, 60))
-
+            
             _, curr_num = cv2.threshold(curr_num, 30, 255, cv2.THRESH_BINARY)
             curr_num = np.array(curr_num, dtype = np.float32)
             curr_num = curr_num.reshape(-1, 30*60)
@@ -150,17 +152,17 @@ def recognize(test_image, wpod_net):
                 result = str(result)
             else: #Neu la chu thi chuyen bang ASCII
                 result = chr(result)
-            print("ky tu nhan dang:{}", result)
+            print("ky tu nhan dang: ", result)
             license_list.extend(result)
         license_string = ''.join(license for license in license_list)
-    cv2.imshow('ket qua', plate_img)
-    cv2.waitKey()
+    # cv2.imshow('ket qua', plate_img)
+    # cv2.waitKey()
     return license_string
 
-    # print("boundingBoxes:" + str(boundingBoxes) )
+    
 
 
     
 # wpod_net_path = "wpod-net-upgrade_final.json"
 # wpod_net = load_model(wpod_net_path)
-# recognize('CarTGMT/AQUA7_null_checkoutex_2020-10-24-11-2VwqfMV8m9C.jpg', wpod_net= wpod_net) 
+# recognize('../CarTGMT/AEONTP_6S81U5_checkin_2020-1-13-16-18bx9UOV6rY5.jpg', wpod_net= wpod_net) 

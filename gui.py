@@ -12,8 +12,7 @@ import numpy as np
 import connect_database
 import count_money
 
-my_image2 = ''
-my_image = ''
+
 
 def sign_in():
     def check(username, password):
@@ -80,6 +79,8 @@ def open_about_me():
     second_root.mainloop()
     
 def call_recognize():
+    my_image2 = ''
+    my_image = ''
     third_root = Tk()
     third_root.title('Reconize license plate')
     third_root.geometry('900x600')
@@ -113,7 +114,7 @@ def call_recognize():
         connect_database.insert(license_string)
     
 
-        cv2.waitKey()
+        # cv2.waitKey()
         
     label =  Label(third_root, bg='gray', image= my_image)
     label.place(x=0, y=40, width=350, height=250)
@@ -159,7 +160,7 @@ def call_recognize():
             # print('Time: ', time)
             print('thanh tien la:',count_money.count(time))
             connect_database.insert_car_out(license_string,count_money.count(time), time_getout )
-            # text3.delete('1.0', END)
+            text3.delete('1.0', END)
             text3.insert(INSERT, str(count_money.count(time))) 
         except:
             text2.delete('1.0', END)
@@ -213,6 +214,7 @@ def manager():
     def manager_price(price):
         if price != "":
             connect_database.insert_price(price)
+            label.config(text='Price:'+str(connect_database.select_price()))
         else:
             messagebox.showerror("showerror", "You need input the price")
 
