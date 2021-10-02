@@ -1,6 +1,8 @@
 import sqlite3
 import datetime
 
+from numpy.core.records import record
+
 def connect ():
     try:
         sqliteConnection = sqlite3.connect('car.db')
@@ -90,4 +92,15 @@ def insert_price(price):
     except  sqlite3.Error as err:
         print('loi khi them gia moi', err)
 
+def check_sign_in (username):
+    try:
+        sqliteConnection = sqlite3.connect('car.db')
+        cursor = sqliteConnection.cursor()
+        cursor.execute('select username, password from signIn where username = ?',[username])
+        record = cursor.fetchone()
+        cursor.close()
+        return record
+    except sqlite3.Error as err:
+        print(err)
 
+# print(check_sign_in('fucckdmin'))

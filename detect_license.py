@@ -3,7 +3,7 @@ import numpy as np
 from local_utils import detect_lp
 from os.path import splitext, basename
 from keras.models import model_from_json 
-import glob
+import math
 import functools
 def load_model(path):
     try:
@@ -25,13 +25,16 @@ def preprocess_image(image_path,resize=False):
         img = cv2.resize(img, (224,224))
     return img
 
-def getPlate(image_path, wpod_net, Dmax = 608, Dmin = 256):
+            
+
+def getPlate(image_path, wpod_net, Dmax = 608, Dmin = 288):
     vehicle = preprocess_image(image_path)
     ratio = float(max(vehicle.shape[:2]))/ min(vehicle.shape[:2])
     side = int (ratio * Dmin)
     bound_dim = min(side, Dmax)
-    _ ,LpImg, _, cor = detect_lp(wpod_net, vehicle, bound_dim, lp_threshold=0.5)
-    return LpImg, cor
+    _ ,LpImg, _ ,cor, Yr = detect_lp(wpod_net, vehicle, bound_dim, lp_threshold=0.5)
+    
+    return  LpImg, cor
 def imshow_components(labels):
     # Map component labels to hue val
         label_hue = np.uint8(179*labels/np.max(labels))
@@ -44,7 +47,7 @@ def imshow_components(labels):
         # set bg label to black
         labeled_img[label_hue==0] = 0
 
-        # cv2.imshow('labeled.png', labeled_img)
+        cv2.imshow('labeled2.png', labeled_img)
 def compare(rect1, rect2):
         
         if abs(rect1[1] - rect2[1]) > 20:
@@ -57,7 +60,7 @@ def recognize(test_image, wpod_net):
     LpImg,cor = getPlate(test_image, wpod_net)
     print("Detect %i plate(s) in"%len(LpImg), splitext(basename(test_image))[0])
     print("Coordiate of plates in image: \n", cor)
-
+    
     if (len(LpImg)):
         
         plate_img = cv2.convertScaleAbs(LpImg[0], alpha = (255.0))
@@ -138,7 +141,7 @@ def recognize(test_image, wpod_net):
             
             output_string =str(x+w) 
             # cv2.putText(plate_img, str(output_string), (x-10, y+h-20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (36,255,12), 1)
-            curr_num = thre_mor[ y:y+h, x:x+w]
+            curr_num = thresh[ y:y+h, x:x+w]
             curr_num = cv2.resize(curr_num, dsize = (30, 60))
             
             _, curr_num = cv2.threshold(curr_num, 30, 255, cv2.THRESH_BINARY)
@@ -152,7 +155,7 @@ def recognize(test_image, wpod_net):
                 result = str(result)
             else: #Neu la chu thi chuyen bang ASCII
                 result = chr(result)
-            print("ky tu nhan dang: ", result)
+            # print("ky tu nhan dang: ", result)
             license_list.extend(result)
         license_string = ''.join(license for license in license_list)
     # cv2.imshow('ket qua', plate_img)
@@ -165,4 +168,4 @@ def recognize(test_image, wpod_net):
     
 # wpod_net_path = "wpod-net-upgrade_final.json"
 # wpod_net = load_model(wpod_net_path)
-# recognize('../CarTGMT/AEONTP_6S81U5_checkin_2020-1-13-16-18bx9UOV6rY5.jpg', wpod_net= wpod_net) 
+# print(recognize('../GreenParking/0000_02187_b.jpg', wpod_net= wpod_net)) 

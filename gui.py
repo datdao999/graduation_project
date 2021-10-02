@@ -11,17 +11,22 @@ from os.path import splitext, basename
 import numpy as np 
 import connect_database
 import count_money
-
+import hashlib
 
 
 def sign_in():
     def check(username, password):
-        if username == 'admin' and password == '123456':
+        hash = hashlib.md5(password.encode())
+        information = connect_database.check_sign_in(username) 
+        if information == None:
+            messagebox.showerror("showerror", "You type wrong username or password") 
+        elif username == information[0] and hash.hexdigest() == information[1]:
             fifth_root.destroy()
             manager()
     fifth_root = Tk()
     fifth_root.title('Sign in')
     fifth_root.geometry('350x200')
+    photo_home = PhotoImage(file = 'arrow-return-down-left-icon.png')
     label = Label(fifth_root, text='Log in', font=("Arial", 24), fg='blue')
     label.place(x=120, y = 0)
     user_name_label = Label(fifth_root, text='Username')
@@ -34,6 +39,9 @@ def sign_in():
     password_entry.place(x=60, y=100)
     sign_in_button = Button(fifth_root, text='Submit', command= lambda:check(user_name_entry.get(), password_entry.get()))
     sign_in_button.place(x = 60, y = 130)
+    home_btn = Button(fifth_root, text= 'Home', image=photo_home, command= lambda: [fifth_root.destroy(),start_page()], compound=LEFT)
+    home_btn.place(x = 0, y = 170)
+
     fifth_root.mainloop()
 
 
@@ -68,14 +76,17 @@ def open_about_me():
     second_root.title('About me')
     second_root.geometry('400x300')
     photo_home = PhotoImage(file = 'arrow-return-down-left-icon.png')
-    
+    photo_logo = ImageTk.PhotoImage(Image.open('logo_utc2.jfif').resize((150,150)))
 
+    logo_label = Label(second_root, image= photo_logo)
+    logo_label.place(x = 130, y = 0, height = 150, width = 150)
+    introduc_string = 'Develop by Dao Duc Dat\n MSV:585107120 - CNTTK58'
    
-    about_me_label = Label(second_root, text = 'Develop by Dao Duc Dat')
-    about_me_label.place(x= 150, y=100)
+    about_me_label = Label(second_root, text = introduc_string)
+    about_me_label.place(x= 130, y=180)
     
     open_root_button = Button(second_root, text= 'Home', image = photo_home ,command= lambda:[second_root.destroy(), start_page()], compound=LEFT)
-    open_root_button.place(x = 180, y=200)
+    open_root_button.place(x = 0, y=270)
     second_root.mainloop()
     
 def call_recognize():
@@ -171,7 +182,6 @@ def call_recognize():
     out_label.place(x=650, y = 0)
 
 
-
     label2 =  Label(third_root, bg='gray', image= my_image2)
     label2.place(x=549, y=40, width=350, height=250)
 
@@ -205,6 +215,7 @@ def manager():
     fouth_root = Tk()
     fouth_root.geometry('500x400')
     fouth_root.title('Manager')
+    photo_home = PhotoImage(file = 'arrow-return-down-left-icon.png')
     def check_input(S):
         if S in ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']:
             return True
@@ -258,9 +269,10 @@ def manager():
     my_tree.heading('time in', text='Time in')
     my_tree.heading('time out', text='Time out')
     
-    
-
     my_tree.place(y = 150, x = 0)
+    home_btn = Button(fouth_root, text= 'Home', image=photo_home, command= lambda: [fouth_root.destroy(),start_page()], compound=LEFT)
+    home_btn.place(x = 430, y = 370)
+
     fouth_root.mainloop()
 
 start_page()
